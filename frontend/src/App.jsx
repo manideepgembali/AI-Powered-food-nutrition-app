@@ -8,6 +8,15 @@ import {
   Zap,
   Flame,
   Droplet,
+  AlertTriangle,
+  RotateCcw,
+  History,
+  Info,
+  CheckCircle2,
+  Coffee,
+  Sun,
+  Moon,
+  Apple,
 } from "lucide-react";
 import "./index.css";
 
@@ -17,6 +26,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [scanHistory, setScanHistory] = useState([]);
+  const [mealType, setMealType] = useState("Unspecified");
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -49,6 +60,7 @@ function App() {
     setPreview(null);
     setResult(null);
     setError(null);
+    setMealType("Unspecified");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -62,9 +74,9 @@ function App() {
 
     const formData = new FormData();
     formData.append("image", file);
+    formData.append("mealType", mealType);
 
     try {
-      // In production, configure proxy or use absolute URL
       const response = await fetch("http://localhost:5000/api/analyze", {
         method: "POST",
         body: formData,
@@ -78,6 +90,18 @@ function App() {
 
       const data = await response.json();
       setResult(data);
+      setResult(data);
+      setScanHistory((prev) =>
+        [
+          {
+            ...data,
+            id: Date.now(),
+            imagePreview: preview,
+            mealContext: mealType,
+          },
+          ...prev,
+        ].slice(0, 5),
+      ); // Keep last 5 scans
     } catch (err) {
       setError(err.message || "An error occurred during analysis.");
     } finally {
@@ -86,189 +110,320 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="text-center mb-10 mt-8">
-        <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-2xl shadow-lg mb-4 text-white animate-float">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center p-3 bg-emerald-500 rounded-2xl shadow-lg mb-4 text-white animate-float">
           <Utensils size={32} />
         </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500 tracking-tight mb-2">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 tracking-tight mb-2">
           NutriLens
         </h1>
-        <p className="text-lg text-slate-600 max-w-xl mx-auto">
+        <p className="text-lg text-slate-500 max-w-xl mx-auto">
           Snap a photo of your food and let AI reveal its nutritional secrets
           instantly.
         </p>
       </div>
 
-      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        {/* Upload Section */}
-        <div className="glass-panel p-8 w-full transition-all duration-300 hover:shadow-2xl">
-          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center">
-            <UploadCloud className="mr-2 text-indigo-500" />
-            Upload Image
-          </h2>
+      {/* Main Grid */}
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-start mb-8">
+        {/* LEFT COLUMN: Upload & History */}
+        <div className="space-y-8 w-full">
+          {/* Upload Section */}
+          <div className="glass-panel p-8 w-full transition-all duration-300 shadow-xl border border-white">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+              <UploadCloud className="mr-2 text-emerald-500" />
+              Upload Image
+            </h2>
 
-          <div
-            className={`border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-200 ${preview ? "border-indigo-300 bg-indigo-50/50" : "border-slate-300 hover:border-indigo-400 hover:bg-slate-50"} cursor-pointer`}
-            onClick={() => !preview && fileInputRef.current?.click()}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept="image/*"
-            />
+            <div
+              className={`border-3 border-dashed rounded-2xl p-6 text-center transition-all duration-200 ${
+                preview
+                  ? "border-emerald-300 bg-emerald-50/50"
+                  : "border-slate-300 hover:border-emerald-400 hover:bg-slate-50"
+              } cursor-pointer`}
+              onClick={() => !preview && fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/*"
+              />
 
-            {preview ? (
-              <div className="relative group">
-                <img
-                  src={preview}
-                  alt="Food preview"
-                  className="max-h-64 mx-auto rounded-lg shadow-md object-cover w-full"
-                />
+              {preview ? (
+                <div className="relative group">
+                  <img
+                    src={preview}
+                    alt="Food preview"
+                    className="max-h-56 mx-auto rounded-lg shadow-md object-cover w-full"
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClear();
+                    }}
+                    className="absolute top-2 right-2 bg-white/90 text-slate-700 p-1.5 rounded-full shadow-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6">
+                  <div className="bg-emerald-100 text-emerald-500 p-4 rounded-full mb-4">
+                    <FileImage size={40} />
+                  </div>
+                  <p className="text-slate-600 font-medium text-lg">
+                    Click to browse or drag image here
+                  </p>
+                  <p className="text-slate-400 text-sm mt-2">
+                    Supports JPG, PNG, WEBP (max 5MB)
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Meal Type Selection Grid */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-slate-700 mb-3 ml-1">
+                When are you eating this?
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClear();
-                  }}
-                  className="absolute top-2 right-2 bg-white/90 text-slate-700 p-1.5 rounded-full shadow-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                  onClick={() => setMealType("Breakfast")}
+                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
+                    mealType === "Breakfast"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-emerald-300 hover:bg-slate-50"
+                  }`}
                 >
-                  <X size={20} />
+                  <Coffee size={20} className="mb-1" />
+                  <span className="text-xs font-bold">Breakfast</span>
+                </button>
+                <button
+                  onClick={() => setMealType("Lunch")}
+                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
+                    mealType === "Lunch"
+                      ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-amber-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <Sun size={20} className="mb-1" />
+                  <span className="text-xs font-bold">Lunch</span>
+                </button>
+                <button
+                  onClick={() => setMealType("Dinner")}
+                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
+                    mealType === "Dinner"
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-indigo-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <Moon size={20} className="mb-1" />
+                  <span className="text-xs font-bold">Dinner</span>
+                </button>
+                <button
+                  onClick={() => setMealType("Snack")}
+                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
+                    mealType === "Snack"
+                      ? "border-rose-500 bg-rose-50 text-rose-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <Apple size={20} className="mb-1" />
+                  <span className="text-xs font-bold">Snack</span>
                 </button>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="bg-indigo-100 text-indigo-500 p-4 rounded-full mb-4">
-                  <FileImage size={40} />
-                </div>
-                <p className="text-slate-600 font-medium text-lg">
-                  Click to browse or drag image here
-                </p>
-                <p className="text-slate-400 text-sm mt-2">
-                  Supports JPG, PNG, WEBP (max 5MB)
-                </p>
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={handleAnalyze}
+                disabled={!file || loading}
+                className={`flex-1 py-3.5 rounded-xl font-bold text-lg flex items-center justify-center transition-all duration-200 shadow-md ${
+                  !file || loading
+                    ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    : "bg-emerald-500 text-white hover:shadow-lg hover:bg-emerald-600 hover:-translate-y-0.5"
+                }`}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={24} />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-2" size={24} />
+                    Analyze Nutrition
+                  </>
+                )}
+              </button>
+
+              {result && (
+                <button
+                  onClick={handleClear}
+                  className="px-5 py-3.5 rounded-xl font-bold text-lg flex items-center justify-center transition-all duration-200 bg-white border-2 border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                  title="Scan Another Item"
+                >
+                  <RotateCcw size={24} />
+                </button>
+              )}
+            </div>
+
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-start">
+                <AlertTriangle className="mr-2 flex-shrink-0" size={18} />
+                <span>{error}</span>
               </div>
             )}
           </div>
 
-          <button
-            onClick={handleAnalyze}
-            disabled={!file || loading}
-            className={`w-full mt-6 py-3.5 rounded-xl font-bold text-lg flex items-center justify-center transition-all duration-200 shadow-md
-              ${
-                !file || loading
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:shadow-lg hover:from-indigo-600 hover:to-blue-700 hover:-translate-y-0.5"
-              }`}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin mr-2" size={24} />
-                Analyzing with Gemini AI...
-              </>
-            ) : (
-              <>
-                <Zap className="mr-2" size={24} />
-                Analyze Nutrition
-              </>
-            )}
-          </button>
-
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-              {error}
+          {/* History Section */}
+          {scanHistory.length > 0 && (
+            <div className="glass-panel p-6 w-full shadow-lg">
+              <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
+                <History className="mr-2 text-indigo-500" size={20} />
+                Recent Scans
+              </h3>
+              <div className="space-y-3">
+                {scanHistory.map((scan) => (
+                  <div
+                    key={scan.id}
+                    className="flex items-center p-3 bg-white/50 rounded-lg border border-slate-100 shadow-sm cursor-pointer hover:bg-white transition"
+                    onClick={() => {
+                      setResult(scan);
+                      setPreview(scan.imagePreview);
+                      setMealType(scan.mealContext || "Unspecified");
+                      setFile(new File([], "history_image.jpg")); // mock file so it doesn't break logic
+                    }}
+                  >
+                    <img
+                      src={scan.imagePreview}
+                      alt={scan.foodName}
+                      className="w-12 h-12 rounded-md object-cover border border-slate-200 mr-4 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-800 truncate">
+                        {scan.foodName}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {scan.calories} • {scan.proteins}
+                      </p>
+                    </div>
+                    {scan.mealContext && scan.mealContext !== "Unspecified" && (
+                      <div className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-bold uppercase tracking-wider ml-2 shrink-0">
+                        {scan.mealContext}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Results Section */}
-        <div className="glass-panel p-8 w-full min-h-[400px] flex flex-col transition-all duration-300">
-          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center">
-            <Utensils className="mr-2 text-indigo-500" />
-            Nutritional Facts
-          </h2>
+        {/* RIGHT COLUMN: Results & Guidelines */}
+        <div className="space-y-8 w-full">
+          {/* Results Section */}
+          <div className="glass-panel p-8 w-full min-h-[480px] flex flex-col transition-all duration-300 shadow-xl border border-white">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+              <Utensils className="mr-2 text-indigo-500" />
+              Nutritional Facts
+            </h2>
 
-          {!result && !loading ? (
-            <div className="flex-1 flex items-center justify-center flex-col text-slate-400">
-              <div className="w-24 h-24 mb-4 rounded-full bg-slate-100 flex items-center justify-center border-2 border-dashed border-slate-300">
-                <Utensils size={32} className="opacity-50" />
-              </div>
-              <p>Upload a food image to see the breakdown here.</p>
-            </div>
-          ) : loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-indigo-400">
-              <Loader2 size={48} className="animate-spin mb-4" />
-              <p className="animate-pulse font-medium">
-                Extracting nutrients...
-              </p>
-            </div>
-          ) : result ? (
-            <div className="flex-1 flex flex-col justify-between animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div>
-                <div className="inline-block px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-700 font-bold mb-4">
-                  Identified Food
+            {!result && !loading ? (
+              <div className="flex-1 flex items-center justify-center flex-col text-slate-400">
+                <div className="w-24 h-24 mb-4 rounded-full bg-slate-100 flex items-center justify-center border-2 border-dashed border-slate-300">
+                  <Utensils size={32} className="opacity-40" />
                 </div>
-                <h3 className="text-3xl font-extrabold text-slate-900 mb-2 capitalize">
-                  {result.foodName}
-                </h3>
-                <p className="text-slate-500 italic mb-8">
-                  "{result.description}"
+                <p>Upload a food image to see the breakdown here.</p>
+              </div>
+            ) : loading ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-emerald-400">
+                <Loader2 size={48} className="animate-spin mb-4" />
+                <p className="animate-pulse font-medium">
+                  Extracting nutrients...
                 </p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 p-4 rounded-2xl flex items-center shadow-sm">
-                  <div className="bg-orange-500/20 p-2 rounded-lg text-orange-600 mr-3">
-                    <Flame size={24} />
+            ) : result ? (
+              <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Warnings Section */}
+                {result.warnings && result.warnings.length > 0 && (
+                  <div className="mb-6 bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-xl shadow-sm">
+                    <div className="flex items-center text-rose-700 font-bold mb-2">
+                      <AlertTriangle size={18} className="mr-2" />
+                      Dietary Warnings
+                      {mealType !== "Unspecified" && (
+                        <span className="ml-2 text-rose-500 text-xs bg-rose-200/50 px-2 py-0.5 rounded uppercase tracking-wider">
+                          For {mealType}
+                        </span>
+                      )}
+                    </div>
+                    <ul className="list-disc pl-5 text-sm text-rose-600 space-y-1">
+                      {result.warnings.map((warning, idx) => (
+                        <li key={idx}>{warning}</li>
+                      ))}
+                    </ul>
                   </div>
-                  <div>
-                    <p className="text-xs text-orange-600 font-bold uppercase tracking-wider">
+                )}
+
+                <div className="mb-6">
+                  <div className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full mb-3 uppercase tracking-wider">
+                    Identified Food
+                  </div>
+                  <h3 className="text-3xl font-extrabold text-slate-900 mb-2 capitalize leading-tight">
+                    {result.foodName}
+                  </h3>
+                  <p className="text-slate-500 italic">
+                    "{result.description}"
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-auto">
+                  <div className="bg-white border text-center p-5 rounded-2xl shadow-sm">
+                    <div className="inline-flex bg-orange-100 p-2 rounded-lg text-orange-500 mb-2">
+                      <Flame size={24} />
+                    </div>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Calories
                     </p>
                     <p className="text-2xl font-extrabold text-slate-800">
                       {result.calories}
                     </p>
                   </div>
-                </div>
 
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-4 rounded-2xl flex items-center shadow-sm">
-                  <div className="bg-blue-500/20 p-2 rounded-lg text-blue-600 mr-3">
-                    <Droplet size={24} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">
+                  <div className="bg-white border text-center p-5 rounded-2xl shadow-sm">
+                    <div className="inline-flex bg-blue-100 p-2 rounded-lg text-blue-500 mb-2">
+                      <Droplet size={24} />
+                    </div>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Proteins
                     </p>
                     <p className="text-2xl font-extrabold text-slate-800">
                       {result.proteins}
                     </p>
                   </div>
-                </div>
 
-                <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 p-4 rounded-2xl flex items-center shadow-sm">
-                  <div className="bg-green-500/20 p-2 rounded-lg text-green-600 mr-3">
-                    <Zap size={24} className="text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-green-600 font-bold uppercase tracking-wider">
+                  <div className="bg-white border text-center p-5 rounded-2xl shadow-sm">
+                    <div className="inline-flex bg-green-100 p-2 rounded-lg text-green-500 mb-2">
+                      <Zap size={24} />
+                    </div>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Carbs
                     </p>
                     <p className="text-2xl font-extrabold text-slate-800">
                       {result.carbs}
                     </p>
                   </div>
-                </div>
 
-                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 p-4 rounded-2xl flex items-center shadow-sm">
-                  <div className="bg-yellow-500/20 p-2 rounded-lg text-yellow-600 mr-3">
-                    <Droplet size={24} className="text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-yellow-600 font-bold uppercase tracking-wider">
+                  <div className="bg-white border text-center p-5 rounded-2xl shadow-sm">
+                    <div className="inline-flex bg-yellow-100 p-2 rounded-lg text-yellow-500 mb-2">
+                      <Droplet size={24} className="text-yellow-500" />
+                    </div>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Fats
                     </p>
                     <p className="text-2xl font-extrabold text-slate-800">
@@ -277,8 +432,112 @@ function App() {
                   </div>
                 </div>
               </div>
+            ) : null}
+          </div>
+
+          {/* Dietary Guidelines Section */}
+          <div className="glass-panel p-8 w-full shadow-lg">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center">
+              <Info className="mr-2 text-blue-500" />
+              Standard Dietary Guidelines
+            </h2>
+
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 border-b pb-2">
+                  Healthy Meal Targets
+                </h4>
+                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                  <div className="p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                    <span className="block font-bold text-slate-800 mb-1">
+                      Breakfast
+                    </span>
+                    <span className="text-slate-500 text-xs">
+                      300-400 kcal
+                      <br />
+                      15g+ Protein
+                    </span>
+                  </div>
+                  <div className="p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                    <span className="block font-bold text-slate-800 mb-1">
+                      Lunch
+                    </span>
+                    <span className="text-slate-500 text-xs">
+                      500-700 kcal
+                      <br />
+                      25g+ Protein
+                    </span>
+                  </div>
+                  <div className="p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                    <span className="block font-bold text-slate-800 mb-1">
+                      Dinner
+                    </span>
+                    <span className="text-slate-500 text-xs">
+                      500-700 kcal
+                      <br />
+                      Lower carbs
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 border-b pb-2">
+                  Examples of Healthy Foods
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm p-2 hover:bg-white/50 rounded-md transition border border-transparent hover:border-slate-200">
+                    <div className="flex items-center">
+                      <CheckCircle2
+                        size={16}
+                        className="text-emerald-500 mr-2"
+                      />{" "}
+                      <span className="font-bold text-slate-700">
+                        Avocado (1 whole)
+                      </span>
+                    </div>
+                    <div className="text-slate-500 text-right text-xs">
+                      240 kcal • 2g Protein
+                      <br />
+                      22g Fats (Healthy)
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-sm p-2 hover:bg-white/50 rounded-md transition border border-transparent hover:border-slate-200">
+                    <div className="flex items-center">
+                      <CheckCircle2
+                        size={16}
+                        className="text-emerald-500 mr-2"
+                      />{" "}
+                      <span className="font-bold text-slate-700">
+                        Grilled Chicken (100g)
+                      </span>
+                    </div>
+                    <div className="text-slate-500 text-right text-xs">
+                      165 kcal • 31g Protein
+                      <br />
+                      0g Carbs
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-sm p-2 hover:bg-white/50 rounded-md transition border border-transparent hover:border-slate-200">
+                    <div className="flex items-center">
+                      <CheckCircle2
+                        size={16}
+                        className="text-emerald-500 mr-2"
+                      />{" "}
+                      <span className="font-bold text-slate-700">
+                        Oatmeal (1 cup cooked)
+                      </span>
+                    </div>
+                    <div className="text-slate-500 text-right text-xs">
+                      158 kcal • 6g Protein
+                      <br />
+                      27g Carbs (Complex)
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
     </div>
