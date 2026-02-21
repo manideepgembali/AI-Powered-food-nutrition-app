@@ -43,6 +43,7 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
 
     const { path, mimetype } = req.file;
     const mealType = req.body.mealType || "Unspecified";
+    const dietGoal = req.body.dietGoal || "General Health";
     const fileBytes = fs.readFileSync(path);
     const base64Image = fileBytes.toString("base64");
 
@@ -51,8 +52,10 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
 IMPORTANT: The nutritional values (calories, proteins, carbs, fats) MUST be based purely on the physical food itself and its portion size in the image. Do NOT change or dilute these core nutritional values based on the time of day it is eaten.
 
 The user is planning to eat this for: **${mealType}**.
-Consider standard dietary guidelines for a ${mealType}. If the food contains exceptionally high amounts of sugar, fats, carbs, or calories *relative to what is healthy for ${mealType}*, provide a brief warning string in the "warnings" array.
-For example, a heavy carb meal right before bed for Dinner might warrant a warning, whereas it might be fine for Lunch.
+Their primary health or diet goal is: **${dietGoal}**.
+
+Consider standard dietary guidelines for a ${mealType} and their goal of ${dietGoal}. If the food contains exceptionally high amounts of sugar, fats, carbs, or calories *relative to what is healthy for ${mealType}* or specifically works against the ${dietGoal} goal, provide a brief warning string in the "warnings" array.
+For example, a heavy carb meal right before bed for Dinner might warrant a warning, especially if the goal is Weight Loss or Keto.
 Return ONLY a valid JSON object with the following structure:
 {
   "foodName": "Name of the food",
@@ -61,7 +64,8 @@ Return ONLY a valid JSON object with the following structure:
   "carbs": "Total carbohydrates in grams (e.g. 30g)",
   "fats": "Total fats in grams (e.g. 5g)",
   "description": "A very brief 1-sentence description of the food",
-  "warnings": ["Warning 1", "Warning 2"] // leave as empty array [] if the food is healthy
+  "warnings": ["Warning 1", "Warning 2"], // empty array [] if the food is healthy
+  "healthierAlternatives": ["Alternative 1", "Alternative 2"] // 1-2 healthier actual food alternatives based on the diet goal and meal type
 }`;
 
     const response = await ai.models.generateContent({

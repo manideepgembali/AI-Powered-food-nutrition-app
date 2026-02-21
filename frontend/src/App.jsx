@@ -17,7 +17,18 @@ import {
   Sun,
   Moon,
   Apple,
+  Activity,
+  Dumbbell,
+  Scale,
+  ShieldPlus,
 } from "lucide-react";
+import {
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from "recharts";
 import "./index.css";
 
 function App() {
@@ -28,6 +39,7 @@ function App() {
   const [error, setError] = useState(null);
   const [scanHistory, setScanHistory] = useState([]);
   const [mealType, setMealType] = useState("Unspecified");
+  const [dietGoal, setDietGoal] = useState("General Health");
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -61,6 +73,7 @@ function App() {
     setResult(null);
     setError(null);
     setMealType("Unspecified");
+    setDietGoal("General Health");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -75,6 +88,7 @@ function App() {
     const formData = new FormData();
     formData.append("image", file);
     formData.append("mealType", mealType);
+    formData.append("dietGoal", dietGoal);
 
     try {
       const response = await fetch("http://localhost:5000/api/analyze", {
@@ -90,7 +104,6 @@ function App() {
 
       const data = await response.json();
       setResult(data);
-      setResult(data);
       setScanHistory((prev) =>
         [
           {
@@ -98,16 +111,23 @@ function App() {
             id: Date.now(),
             imagePreview: preview,
             mealContext: mealType,
+            goalContext: dietGoal,
           },
           ...prev,
-        ].slice(0, 5),
-      ); // Keep last 5 scans
+        ].slice(0, 10),
+      ); // Keep last 10 scans for better daily tracking
     } catch (err) {
       setError(err.message || "An error occurred during analysis.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Calculate Daily Totals
+  const todayCalories = scanHistory.reduce((acc, scan) => {
+    const cal = parseInt(scan.calories) || 0;
+    return acc + cal;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
@@ -186,60 +206,138 @@ function App() {
               )}
             </div>
 
-            {/* Meal Type Selection Grid */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-3 ml-1">
-                When are you eating this?
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  onClick={() => setMealType("Breakfast")}
-                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
-                    mealType === "Breakfast"
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-emerald-300 hover:bg-slate-50"
-                  }`}
-                >
-                  <Coffee size={20} className="mb-1" />
-                  <span className="text-xs font-bold">Breakfast</span>
-                </button>
-                <button
-                  onClick={() => setMealType("Lunch")}
-                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
-                    mealType === "Lunch"
-                      ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-amber-300 hover:bg-slate-50"
-                  }`}
-                >
-                  <Sun size={20} className="mb-1" />
-                  <span className="text-xs font-bold">Lunch</span>
-                </button>
-                <button
-                  onClick={() => setMealType("Dinner")}
-                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
-                    mealType === "Dinner"
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-indigo-300 hover:bg-slate-50"
-                  }`}
-                >
-                  <Moon size={20} className="mb-1" />
-                  <span className="text-xs font-bold">Dinner</span>
-                </button>
-                <button
-                  onClick={() => setMealType("Snack")}
-                  className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${
-                    mealType === "Snack"
-                      ? "border-rose-500 bg-rose-50 text-rose-700 shadow-sm"
-                      : "border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-slate-50"
-                  }`}
-                >
-                  <Apple size={20} className="mb-1" />
-                  <span className="text-xs font-bold">Snack</span>
-                </button>
+            {/* Context Selection Grids */}
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">
+                  1. When are you eating this?
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    onClick={() => setMealType("Breakfast")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      mealType === "Breakfast"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-emerald-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Coffee size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      Breakfast
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setMealType("Lunch")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      mealType === "Lunch"
+                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-amber-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Sun size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      Lunch
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setMealType("Dinner")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      mealType === "Dinner"
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-indigo-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Moon size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      Dinner
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setMealType("Snack")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      mealType === "Snack"
+                        ? "border-rose-500 bg-rose-50 text-rose-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Apple size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      Snack
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 ml-1 mt-4">
+                  2. What is your primary diet goal?
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    onClick={() => setDietGoal("Weight Loss")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      dietGoal === "Weight Loss"
+                        ? "border-teal-500 bg-teal-50 text-teal-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-teal-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Scale size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-center leading-tight">
+                      Weight
+                      <br />
+                      Loss
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setDietGoal("Muscle Gain")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      dietGoal === "Muscle Gain"
+                        ? "border-orange-500 bg-orange-50 text-orange-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-orange-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Dumbbell size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-center leading-tight">
+                      Muscle
+                      <br />
+                      Gain
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setDietGoal("Keto / Low Carb")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      dietGoal === "Keto / Low Carb"
+                        ? "border-purple-500 bg-purple-50 text-purple-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-purple-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Activity size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-center leading-tight">
+                      Keto
+                      <br />
+                      Low Carb
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setDietGoal("General Health")}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border-2 transition-all ${
+                      dietGoal === "General Health"
+                        ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <ShieldPlus size={18} className="mb-1" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-center leading-tight">
+                      General
+                      <br />
+                      Health
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-2">
+            <div className="flex gap-3 mt-4">
               <button
                 onClick={handleAnalyze}
                 disabled={!file || loading}
@@ -281,13 +379,25 @@ function App() {
             )}
           </div>
 
-          {/* History Section */}
+          {/* History Section with Daily Tracker */}
           {scanHistory.length > 0 && (
             <div className="glass-panel p-6 w-full shadow-lg">
-              <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                <History className="mr-2 text-indigo-500" size={20} />
-                Recent Scans
-              </h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center">
+                  <History className="mr-2 text-indigo-500" size={20} />
+                  My Food Log
+                </h3>
+                <div className="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 flex items-center shadow-inner">
+                  <Flame className="text-orange-500 mr-2" size={16} />
+                  <span className="text-sm font-bold text-slate-700">
+                    Daily Total:{" "}
+                    <span className="text-orange-600 font-extrabold text-base">
+                      {todayCalories}
+                    </span>{" "}
+                    kcal
+                  </span>
+                </div>
+              </div>
               <div className="space-y-3">
                 {scanHistory.map((scan) => (
                   <div
@@ -297,6 +407,7 @@ function App() {
                       setResult(scan);
                       setPreview(scan.imagePreview);
                       setMealType(scan.mealContext || "Unspecified");
+                      if (scan.goalContext) setDietGoal(scan.goalContext);
                       setFile(new File([], "history_image.jpg")); // mock file so it doesn't break logic
                     }}
                   >
@@ -309,8 +420,11 @@ function App() {
                       <p className="font-bold text-slate-800 truncate">
                         {scan.foodName}
                       </p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {scan.calories} • {scan.proteins}
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                        <span className="font-bold text-orange-500">
+                          {scan.calories}
+                        </span>{" "}
+                        • {scan.proteins}
                       </p>
                     </div>
                     {scan.mealContext && scan.mealContext !== "Unspecified" && (
@@ -357,8 +471,8 @@ function App() {
                       <AlertTriangle size={18} className="mr-2" />
                       Dietary Warnings
                       {mealType !== "Unspecified" && (
-                        <span className="ml-2 text-rose-500 text-xs bg-rose-200/50 px-2 py-0.5 rounded uppercase tracking-wider">
-                          For {mealType}
+                        <span className="ml-2 text-rose-500 text-[10px] bg-rose-200/50 px-2 py-0.5 rounded uppercase tracking-wider">
+                          For {mealType} / {dietGoal}
                         </span>
                       )}
                     </div>
@@ -390,8 +504,11 @@ function App() {
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Calories
                     </p>
-                    <p className="text-2xl font-extrabold text-slate-800">
-                      {result.calories}
+                    <p
+                      className="text-2xl font-extrabold text-slate-800"
+                      title={result.calories}
+                    >
+                      {parseInt(result.calories) || result.calories}
                     </p>
                   </div>
 
@@ -402,8 +519,11 @@ function App() {
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Proteins
                     </p>
-                    <p className="text-2xl font-extrabold text-slate-800">
-                      {result.proteins}
+                    <p
+                      className="text-2xl font-extrabold text-slate-800"
+                      title={result.proteins}
+                    >
+                      {parseInt(result.proteins) || result.proteins}g
                     </p>
                   </div>
 
@@ -414,8 +534,11 @@ function App() {
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Carbs
                     </p>
-                    <p className="text-2xl font-extrabold text-slate-800">
-                      {result.carbs}
+                    <p
+                      className="text-2xl font-extrabold text-slate-800"
+                      title={result.carbs}
+                    >
+                      {parseInt(result.carbs) || result.carbs}g
                     </p>
                   </div>
 
@@ -426,11 +549,100 @@ function App() {
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       Fats
                     </p>
-                    <p className="text-2xl font-extrabold text-slate-800">
-                      {result.fats}
+                    <p
+                      className="text-2xl font-extrabold text-slate-800"
+                      title={result.fats}
+                    >
+                      {parseInt(result.fats) || result.fats}g
                     </p>
                   </div>
                 </div>
+
+                {/* Macro Pie Chart */}
+                <div className="mt-4 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm h-[300px]">
+                  <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2 text-center">
+                    Macro Split
+                  </h4>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          {
+                            name: "Proteins",
+                            value: parseInt(result.proteins) || 0,
+                            color: "#3b82f6",
+                          }, // blue-500
+                          {
+                            name: "Carbs",
+                            value: parseInt(result.carbs) || 0,
+                            color: "#22c55e",
+                          }, // green-500
+                          {
+                            name: "Fats",
+                            value: parseInt(result.fats) || 0,
+                            color: "#eab308",
+                          }, // yellow-500
+                        ]}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={65}
+                        outerRadius={85}
+                        paddingAngle={5}
+                      >
+                        {[
+                          { name: "Proteins", color: "#3b82f6" },
+                          { name: "Carbs", color: "#22c55e" },
+                          { name: "Fats", color: "#eab308" },
+                        ].map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.color}
+                            strokeWidth={0}
+                          />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={(value, name) => [`${value}g`, name]}
+                        contentStyle={{
+                          borderRadius: "12px",
+                          border: "none",
+                          boxShadow:
+                            "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Alternatives Section */}
+                {result.healthierAlternatives &&
+                  result.healthierAlternatives.length > 0 && (
+                    <div className="mt-6 bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm">
+                      <div className="flex items-center text-emerald-700 font-bold mb-3">
+                        <ShieldPlus
+                          size={20}
+                          className="mr-2 text-emerald-500"
+                        />
+                        Alternative Ideas for {dietGoal}
+                      </div>
+                      <ul className="space-y-2.5">
+                        {result.healthierAlternatives.map((alt, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-start text-sm text-emerald-800 leading-snug"
+                          >
+                            <CheckCircle2
+                              size={16}
+                              className="mr-2.5 mt-0.5 text-emerald-500 shrink-0"
+                            />
+                            <span>{alt}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
               </div>
             ) : null}
           </div>
